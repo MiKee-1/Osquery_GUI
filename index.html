@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>osquery GUI</title>
+    <script>
+        function loadQuery(queryName, queryText) {
+            document.getElementById('query_name').value = queryName;
+            document.getElementById('query_text').value = queryText;
+        }
+
+        function populateQueryForm(queryText) {
+            document.getElementById('query').value = queryText;
+        }
+
+        function selectIP(ip) {
+            document.getElementById('ip').value = ip;
+        }
+    </script>
+
+    <style>
+        body {
+            background: #a596ff;
+            color: black;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background: #202532;
+            padding: 20px;
+            margin-bottom: 50px;
+            color: white;
+            text-align: center;
+        }
+
+        h1 {
+            margin: 0;
+        }
+
+        form {
+            max-width: 600px;
+            margin: 0 auto 20px;
+            padding: 20px;
+            background: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        input[type="text"] {
+            width: calc(100% - 24px);
+            padding: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        button {
+            background-color: #202532;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background-color: #3b4255;
+        }
+
+        h2 {
+            text-align: center;
+            color: #202532;
+        }
+
+        #preset-queries {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #f9f9f9;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        #preset-queries div {
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #preset-queries a {
+            text-decoration: none;
+            color: #202532;
+        }
+
+        #preset-queries button {
+            background-color: #a596ff;
+            color: #202532;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        #preset-queries button:hover {
+            background-color: #8a7bd1;
+        }
+
+        #output {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        #explain_output{
+            max-width: 600px;
+            margin: 0 auto;
+            margin-bottom: 20px;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background-color: #fff;
+        }
+
+        table, th, td {
+            border: 1px solid #ccc;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #202532;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <header><h1>OsQuery GUI</h1></header>
+    
+    <form method="POST">
+        <label for="ip">Indirizzo IP da scansionare:</label>
+        <input type="text" id="ip" name="ip" required value="{{ last_ip }}"><br><br>
+        <div id="preset-ips">
+            {% for ip in ips %}
+                <button type="button" onclick="selectIP('{{ ip }}')">{{ ip }}</button>
+            {% endfor %}
+        </div><br>
+        <label for="port">Porta:</label>
+        <input type="text" id="port" name="port" required><br><br>
+
+        <label for="process_name">Nome del processo (opzionale):</label>
+        <input type="text" id="process_name" name="process_name"><br><br>
+
+        <label for="query">Query da eseguire:</label>
+        <input type="text" id="query" name="query" required><br><br>
+
+        <button type="submit" name="execute">Esegui</button>
+    </form>
+
+    <h2>Salva la tua query</h2>
+    <form method="POST">
+        <label for="query_name">Nome query da salvare:</label>
+        <input type="text" id="query_name" name="query_name" required><br><br>
+
+        <label for="query_text">Query da eseguire:</label>
+        <input type="text" id="query_text" name="query_text" required><br><br>
+
+        <button type="submit" name="save_query">Salva</button>
+    </form>
+
+    <h2>Query salvate:</h2>
+    <div id="preset-queries">
+        {% for query in queries %}
+            <div>
+                <a href="#" onclick="populateQueryForm('{{ query.query }}')">{{ query.name }}</a>
+                <form method="POST" action="{{ url_for('delete_query', query_name=query.name) }}" style="display: inline;">
+                    <button type="submit">Elimina</button>
+                </form>
+            </div>
+        {% endfor %}
+    </div>
+
+    <h2>Ultime Scansioni</h2>
+    <form method="GET" action="/">
+        <label for="filter_ip">Filtra per IP:</label>
+        <input type="text" id="filter_ip" name="filter_ip">
+        <button type="submit">Filtra</button>
+       
+    </form>
+
+    <div id="scansions">
+            <table>
+                <thead>
+                    <tr>
+                        <th>IP</th>
+                        <th>Porta</th>
+                        <th>Query</th>
+                        <th>Processo</th>
+                        <th>Output</th>
+                        <th>Data Scansione</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for scan in scansions %}
+                        <tr>
+                            <td>{{ scan.ip }}</td>
+                            <td>{{ scan.port }}</td>
+                            <td>{{ scan.query }}</td>
+                            <td>{{ scan.process_name }}</td>
+                            <td><pre>{{ scan.output }}</pre></td>
+                            <td>{{ scan.scan_time }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    <h2>Output:</h2>
+    <div id="output">
+        <pre>{{ output }}</pre>
+    </div>
+
+    <h2>AI:</h2>
+<div id="explain_output">
+    <pre>{{ explain_output }}</pre>
+</div>
+
+</body>
+</html>
